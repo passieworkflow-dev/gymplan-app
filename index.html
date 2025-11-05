@@ -47,7 +47,15 @@
   </div>
 
   <!-- Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+  // Quick check if Supabase loaded
+  if (typeof supabase === 'undefined') {
+    console.error('Supabase script failed to load. Try refreshing or check your network.');
+  } else {
+    console.log('Supabase loaded successfully.');
+  }
+</script>
 
   <script>
   // ---------- CONFIG ----------
@@ -184,6 +192,7 @@
 </script>
 </body>
 </html>
+
 
 
 
