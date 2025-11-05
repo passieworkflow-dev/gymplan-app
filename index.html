@@ -50,11 +50,16 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 
   <script>
-    // ---------- CONFIG ----------
-    const SUPABASE_URL = "https://utrmpajuymlcqixcdter.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cm1wYWp1eW1sY3FpeGNkdGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNjExMTMsImV4cCI6MjA3NzgzNzExM30.6gEBRDGSsS7pE_I73C2ioGLyCo62Wyv6XtGPKzM4AHg";
+  // ---------- CONFIG ----------
+  const SUPABASE_URL = "https://utrmpajuymlcqixcdter.supabase.co";  
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cm1wYWp1eW1sY3FpeGNkdGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNjExMTMsImV4cCI6MjA3NzgzNzExM30.6gEBRDGSsS7pE_I73C2ioGLyCo62Wyv6XtGPKzM4AHg";  
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Wait for Supabase to load and initialize the client
+  if (typeof supabase === 'undefined') {
+    console.error('Supabase script not loaded. Check the CDN link.');
+  } else {
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ---------- HELPERS ----------
     const $ = id => document.getElementById(id);
@@ -74,20 +79,20 @@
       authMsg.textContent = "";
       const email = emailInput.value.trim(), password = passInput.value.trim();
       if (!email || !password) { authMsg.textContent = "Provide email & password"; return; }
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabaseClient.auth.signUp({ email, password });
       if (error) authMsg.textContent = error.message; else authMsg.textContent = "Check your email to confirm (if enabled)";
     };
 
     loginBtn.onclick = async () => {
       authMsg.textContent = "";
       const email = emailInput.value.trim(), password = passInput.value.trim();
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (error) { authMsg.textContent = error.message; return; }
       initApp(); // load app
     };
 
     logoutBtn.onclick = async () => {
-      await supabase.auth.signOut();
+      await supabaseClient.auth.signOut();
       showAuth();
     };
 
@@ -96,13 +101,13 @@
     function showApp(){ authDiv.classList.add('hidden'); appDiv.classList.remove('hidden'); }
 
     async function initApp(){
-      const user = supabase.auth.getUser ? (await supabase.auth.getUser()).data.user : (await supabase.auth.getUser()).user;
+      const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) { showAuth(); return; }
       showApp();
       await loadPlanForUser(user.id);
       await loadMessages(user.id);
       // Optional: subscribe to realtime messages (Supabase Realtime)
-      supabase.channel('public:messages')
+      supabaseClient.channel('public:messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
           const m = payload.new;
           if (m.user_id === user.id) addMessageToUI(m);
@@ -116,7 +121,7 @@
       const today = new Date().toISOString().slice(0,10);
       planStatus.textContent = "Fetching plan…";
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('plans')
         .select('id, plan_date, plan_json, created_at')
         .eq('user_id', userId)
@@ -141,7 +146,7 @@
     // ---------- Messages ----------
     async function loadMessages(userId){
       messagesDiv.innerHTML = "<p class='text-sm text-gray-500'>Loading messages…</p>";
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('messages')
         .select('*')
         .eq('user_id', userId)
@@ -160,12 +165,11 @@
     }
 
     sendMsgBtn.onclick = async () => {
-      const u = await supabase.auth.getUser();
-      const user = u.data.user;
+      const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) { alert('Please login'); return; }
       const content = msgInput.value.trim();
       if (!content) return;
-      const { error } = await supabase.from('messages').insert([{ user_id: user.id, content }]);
+      const { error } = await supabaseClient.from('messages').insert([{ user_id: user.id, content }]);
       if (error) return alert('Error: ' + error.message);
       msgInput.value = '';
       // message will show via realtime subscription or you can optimistically render
@@ -173,10 +177,12 @@
 
     // On load: check auth
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabaseClient.auth.getUser();
       if (user) initApp(); else showAuth();
     })();
-  </script>
+  }
+</script>
 </body>
 </html>
+
 
