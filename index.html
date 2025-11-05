@@ -51,11 +51,10 @@
 
   <script>
     // ---------- CONFIG ----------
-    const SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co";
-    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
-    // replace the above with your project's values (Supabase -> Project Settings -> API)
+    const SUPABASE_URL = "https://utrmpajuymlcqixcdter.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cm1wYWp1eW1sY3FpeGNkdGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNjExMTMsImV4cCI6MjA3NzgzNzExM30.6gEBRDGSsS7pE_I73C2ioGLyCo62Wyv6XtGPKzM4AHg";
 
-    const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ---------- HELPERS ----------
     const $ = id => document.getElementById(id);
@@ -180,3 +179,4 @@
   </script>
 </body>
 </html>
+
