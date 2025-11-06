@@ -188,59 +188,69 @@
       // message will show via realtime subscription or you can optimistically render
     };
 
-    // ---------- NEW: Plan Generation Functions ----------
-    // UPDATED: Generate plan options (3 previews)
-    async function generatePlan() {
-      try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) {
-          alert('Please log in first.');
-          return;
-        }
+   // ---------- NEW: Plan Generation Functions ----------
+// UPDATED: Generate plan options (3 previews)
+async function generatePlan() {
+  console.log('generatePlan function called');  // Debug: Check if this prints on button click
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      alert('Please log in first.');
+      return;
+    }
+    console.log('User found:', user.email);  // Debug: Confirm user is logged in
 
-        const { data: profile, error } = await supabaseClient
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-        if (error || !profile) {
-          alert('User profile not found. Please complete your profile.');
-          return;
-        }
+    const { data: profile, error } = await supabaseClient
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    if (error || !profile) {
+      alert('User profile not found. Please complete your profile.');
+      return;
+    }
+    console.log('Profile loaded:', profile.email);  // Debug: Confirm profile is fetched
 
-        const userData = {
-          email: profile.email,
-          gender: profile.gender,
-          weight: profile.weight,
-          date_of_birth: profile.date_of_birth,
-          fit_status: profile.fit_status,
-          goal: profile.goal,
-          days_per_week: profile.days_per_week,
-          equipment: profile.equipment,
-          isFirstWeek: true,
-          feedbackSummary: ''
-        };
+    const userData = {
+      email: profile.email,
+      gender: profile.gender,
+      weight: profile.weight,
+      date_of_birth: profile.date_of_birth,
+      fit_status: profile.fit_status,
+      goal: profile.goal,
+      days_per_week: profile.days_per_week,
+      equipment: profile.equipment,
+      isFirstWeek: true,
+      feedbackSummary: ''
+    };
+    console.log('User data prepared:', userData);  // Debug: Check data structure
 
-        const response = await fetch('/api/generate-plan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(userData)
-        });
+    const response = await fetch('/api/generate-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+    console.log('Fetch response status:', response.status);  // Debug: Check if fetch succeeds
 
-        if (!response.ok) {
-          throw new Error('Failed to generate plan options: ' + response.statusText);
-        }
-
-        const result = await response.json();  // Expect { planA: {...}, planB: {...}, planC: {...}, email: "..." }
-        
-        // Display the 3 plan options for selection
-        displayPlanOptions(result);
-      } catch (err) {
-        console.error('Error generating plan options:', err);
-        alert('Error: ' + err.message);
-      }
+    if (!response.ok) {
+      throw new Error('Failed to generate plan options: ' + response.statusText);
     }
 
+    const result = await response.json();
+    console.log('Result from n8n:', result);  // Debug: Check what n8n returns
+    
+    // Display the 3 plan options for selection
+    displayPlanOptions(result);
+  } catch (err) {
+    console.error('Error generating plan options:', err);
+    alert('Error: ' + err.message);
+  }
+}
+
+// Event listeners
+document.getElementById('generatePlanBtn').addEventListener('click', generatePlan);
+console.log('Event listener attached to generatePlanBtn');  // Debug: Confirm listener is set
+    
     // NEW: Display plan options with choice buttons
     function displayPlanOptions(plans) {
       const optionsDiv = document.getElementById('planOptions');
@@ -312,6 +322,7 @@
 </script>
 </body>
 </html>
+
 
 
 
