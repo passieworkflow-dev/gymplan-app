@@ -195,31 +195,32 @@
 
     // ---------- Load plan ----------
     async function loadPlanForUser(userId){
-      // Today's date in YYYY-MM-DD
-      const today = new Date().toISOString().slice(0,10);
-      planStatus.textContent = "Fetching plan…";
+  const today = new Date().toISOString().slice(0,10);
+  planStatus.textContent = "Fetching plan…";
 
-      const { data, error } = await supabaseClient
-        .from('plans')
-        .select('id, plan_date, plan_json, created_at')
-        .eq('user_id', userId)
-        .eq('plan_date', today)
-        .limit(1)
-        .order('created_at', { ascending: false });
+  const { data, error } = await supabaseClient
+    .from('plans')
+    .select('id, plan_date, plan_json, created_at')
+    .eq('user_id', userId)
+    .eq('plan_date', today)
+    .limit(1)
+    .order('created_at', { ascending: false });
 
-      if (error) {
-        planStatus.textContent = "Error loading plan: " + error.message;
-        planJson.textContent = "";
-        return;
-      }
-      if (!data || data.length === 0) {
-        planStatus.textContent = "No plan for today. Ask the system to generate one.";
-        planJson.textContent = "";
-        return;
-      }
-      planStatus.textContent = "Today's plan:";
-      planJson.textContent = JSON.stringify(data[0].plan_json, null, 2);
-    }
+  if (error) {
+    planStatus.textContent = "Error loading plan: " + error.message;
+    planJson.textContent = "";
+    return;
+  }
+  if (!data || data.length === 0) {
+    planStatus.textContent = "No plan for today. Generate one below!";
+    planJson.textContent = "";
+    return;
+  }
+  planStatus.textContent = "Today's plan:";
+  // Format the plan with line breaks for readability
+  const formattedPlan = data[0].plan_json.replace(/\\n/g, '\n');  // Ensure \n becomes actual newlines
+  planJson.textContent = formattedPlan;
+}
 
     // ---------- Messages ----------
     async function loadMessages(userId){
@@ -325,6 +326,7 @@ document.getElementById('generatePlanBtn').addEventListener('click', generatePla
 </script>
 </body>
 </html>
+
 
 
 
