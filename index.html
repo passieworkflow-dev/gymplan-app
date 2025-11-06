@@ -23,314 +23,292 @@
     </div>
 
     <div id="app" class="hidden space-y-4">
-  <div class="flex justify-between items-center">
-    <h2 class="text-xl font-semibold">Your plan</h2>
-    <div>
-      <button id="logoutBtn" class="text-sm text-gray-600">Log out</button>
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-semibold">Your plan</h2>
+        <div>
+          <button id="logoutBtn" class="text-sm text-gray-600">Log out</button>
+        </div>
+      </div>
+
+      <div id="planCard" class="p-4 border rounded bg-gray-50">
+        <p id="planStatus" class="text-sm text-gray-600">Loading plan…</p>
+        <pre id="planJson" class="text-xs mt-2 overflow-auto"></pre>
+      </div>
+
+      <!-- NEW: Plan Selection Section -->
+      <div id="planSelection" class="hidden" style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; background-color: #f0f0f0;">
+        <h3 class="font-medium">Choose Your Plan</h3>
+        <div id="planOptions" style="margin-top: 10px;"></div>
+      </div>
+
+      <div>
+        <h3 class="font-medium">Chat / Feedback</h3>
+        <div id="messages" class="h-40 overflow-auto border rounded p-2 bg-white mb-2"></div>
+        <div class="flex gap-2">
+          <input id="msgInput" class="flex-1 p-2 border rounded" placeholder="Type a message..." />
+          <button id="sendMsgBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Send</button>
+        </div>
+      </div>
+
+      <!-- NEW: Button and display for generating plans -->
+      <div style="margin-top: 20px;">
+        <button id="generatePlanBtn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Generate New Weekly Plan</button>
+      </div>
+      <div id="planDisplay" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; white-space: pre-wrap;"></div>
     </div>
-  </div>
-
-  <div id="planCard" class="p-4 border rounded bg-gray-50">
-    <p id="planStatus" class="text-sm text-gray-600">Loading plan…</p>
-    <pre id="planJson" class="text-xs mt-2 overflow-auto"></pre>
-  </div>
-
-  <div>
-    <h3 class="font-medium">Chat / Feedback</h3>
-    <div id="messages" class="h-40 overflow-auto border rounded p-2 bg-white mb-2"></div>
-    <div class="flex gap-2">
-      <input id="msgInput" class="flex-1 p-2 border rounded" placeholder="Type a message..." />
-      <button id="sendMsgBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Send</button>
-    </div>
-  </div>
-
-  <!-- NEW: Button and display for generating plans -->
-  <div style="margin-top: 20px;">
-    <button id="generatePlanBtn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Generate New Plan</button>
-  </div>
-  <div id="planDisplay" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; white-space: pre-wrap;"></div>
-</div>
   </div>
 
   <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-    // ... (your existing JavaScript code) ...
+    // ---------- CONFIG ----------
+    const SUPABASE_URL = "https://utrmpajuymlcqixcdter.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cm1wYWp1eW1sY3FpeGNkdGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNjExMTMsImV4cCI6MjA3NzgzNzExM30.6gEBRDGSsS7pE_I73C2ioGLyCo62Wyv6XtGPKzM4AHg";
 
-    // NEW: Add the generatePlan function and event listener here, after the existing code
-    async function generatePlan() {
-      try {
+    // Wait for Supabase to load and initialize the client
+    if (typeof supabase === 'undefined') {
+      console.error('Supabase script not loaded. Check the CDN link.');
+    } else {
+      const { createClient } = supabase;
+      const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      // ---------- HELPERS ----------
+      const $ = id => document.getElementById(id);
+
+      // Auth elements
+      const emailInput = $('email'), passInput = $('password');
+      const signupBtn = $('signupBtn'), loginBtn = $('loginBtn'), logoutBtn = $('logoutBtn');
+      const authMsg = $('authMsg');
+
+      // App elements
+      const authDiv = $('auth'), appDiv = $('app');
+      const planStatus = $('planStatus'), planJson = $('planJson');
+      const messagesDiv = $('messages'), msgInput = $('msgInput'), sendMsgBtn = $('sendMsgBtn');
+
+      // ---------- AUTH ----------
+      signupBtn.onclick = async () => {
+        authMsg.textContent = "";
+        const email = emailInput.value.trim(), password = passInput.value.trim();
+        if (!email || !password) { authMsg.textContent = "Provide email & password"; return; }
+        const { error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) authMsg.textContent = error.message; else authMsg.textContent = "Check your email to confirm (if enabled)";
+      };
+
+      loginBtn.onclick = async () => {
+        authMsg.textContent = "";
+        const email = emailInput.value.trim(), password = passInput.value.trim();
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) { authMsg.textContent = error.message; return; }
+        initApp(); // load app
+      };
+
+      logoutBtn.onclick = async () => {
+        await supabaseClient.auth.signOut();
+        showAuth();
+      };
+
+      // ---------- UI Flow ----------
+      function showAuth(){ authDiv.classList.remove('hidden'); appDiv.classList.add('hidden'); }
+      function showApp(){ authDiv.classList.add('hidden'); appDiv.classList.remove('hidden'); }
+
+      async function initApp(){
         const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) {
-          alert('Please log in first.');
+        if (!user) { showAuth(); return; }
+        showApp();
+        await loadPlanForUser(user.id);
+        await loadMessages(user.id);
+        // Optional: subscribe to realtime messages (Supabase Realtime)
+        supabaseClient.channel('public:messages')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+            const m = payload.new;
+            if (m.user_id === user.id) addMessageToUI(m);
+          })
+          .subscribe();
+      }
+
+      // ---------- Load plan ----------
+      async function loadPlanForUser(userId){
+        const today = new Date().toISOString().slice(0,10);
+        planStatus.textContent = "Fetching plan…";
+
+        const { data, error } = await supabaseClient
+          .from('plans')
+          .select('id, plan_date, plan_json, created_at')
+          .eq('user_id', userId)
+          .eq('plan_date', today)
+          .limit(1)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          planStatus.textContent = "Error loading plan: " + error.message;
+          planJson.textContent = "";
           return;
         }
+        if (!data || data.length === 0) {
+          planStatus.textContent = "No plan for today. Generate one below!";
+          planJson.textContent = "";
+          return;
+        }
+        planStatus.textContent = "Today's plan:";
+        // Format the plan with line breaks for readability
+        const formattedPlan = data[0].plan_json.replace(/\\n/g, '\n');  // Ensure \n becomes actual newlines
+        planJson.textContent = formattedPlan;
+      }
 
-        const { data: profile, error } = await supabaseClient
-          .from('user_profiles')
+      // ---------- Messages ----------
+      async function loadMessages(userId){
+        messagesDiv.innerHTML = "<p class='text-sm text-gray-500'>Loading messages…</p>";
+        const { data, error } = await supabaseClient
+          .from('messages')
           .select('*')
-          .eq('user_id', user.id)
-          .single();
-        if (error || !profile) {
-          alert('User profile not found. Please complete your profile.');
-          return;
+          .eq('user_id', userId)
+          .order('created_at', { ascending: true });
+        if (error) { messagesDiv.innerHTML = "<p class='text-sm text-red-500'>Error loading messages</p>"; return; }
+        messagesDiv.innerHTML = '';
+        data.forEach(addMessageToUI);
+      }
+
+      function addMessageToUI(m){
+        const el = document.createElement('div');
+        el.className = 'p-2 border-b text-sm';
+        el.textContent = (new Date(m.created_at)).toLocaleString() + " — " + m.content;
+        messagesDiv.appendChild(el);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+
+      sendMsgBtn.onclick = async () => {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { alert('Please login'); return; }
+        const content = msgInput.value.trim();
+        if (!content) return;
+        const { error } = await supabaseClient.from('messages').insert([{ user_id: user.id, content }]);
+        if (error) return alert('Error: ' + error.message);
+        msgInput.value = '';
+        // message will show via realtime subscription or you can optimistically render
+      };
+
+      // ---------- NEW: Plan Generation Functions ----------
+      // UPDATED: Generate plan options (3 previews)
+      async function generatePlan() {
+        try {
+          const { data: { user } } = await supabaseClient.auth.getUser();
+          if (!user) {
+            alert('Please log in first.');
+            return;
+          }
+
+          const { data: profile, error } = await supabaseClient
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          if (error || !profile) {
+            alert('User profile not found. Please complete your profile.');
+            return;
+          }
+
+          const userData = {
+            email: profile.email,
+            gender: profile.gender,
+            weight: profile.weight,
+            date_of_birth: profile.date_of_birth,
+            fit_status: profile.fit_status,
+            goal: profile.goal,
+            days_per_week: profile.days_per_week,
+            equipment: profile.equipment,
+            isFirstWeek: true,
+            feedbackSummary: ''
+          };
+
+          const response = await fetch('https://passiesport.app.n8n.cloud/webhook/generate-plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to generate plan options: ' + response.statusText);
+          }
+
+          const result = await response.json();  // Expect { planA: {...}, planB: {...}, planC: {...}, email: "..." }
+          
+          // Display the 3 plan options for selection
+          displayPlanOptions(result);
+        } catch (err) {
+          console.error('Error generating plan options:', err);
+          alert('Error: ' + err.message);
         }
+      }
 
-        const userData = {
-          email: profile.email,
-          gender: profile.gender,
-          weight: profile.weight,
-          date_of_birth: profile.date_of_birth,
-          fit_status: profile.fit_status,
-          goal: profile.goal,
-          days_per_week: profile.days_per_week,
-          equipment: profile.equipment,
-          isFirstWeek: true,
-          feedbackSummary: ''
-        };
+      // NEW: Display plan options with choice buttons
+      function displayPlanOptions(plans) {
+        const optionsDiv = document.getElementById('planOptions');
+        optionsDiv.innerHTML = '';  // Clear previous
 
-        const response = await fetch('https://your-n8n-instance.com/webhook/generate-plan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(userData)
+        ['planA', 'planB', 'planC'].forEach(planKey => {
+          const plan = plans[planKey];
+          if (plan) {
+            const planDiv = document.createElement('div');
+            planDiv.style.marginBottom = '15px';
+            planDiv.style.padding = '10px';
+            planDiv.style.border = '1px solid #ccc';
+            planDiv.style.backgroundColor = '#fff';
+            planDiv.innerHTML = `
+              <h4>${planKey.toUpperCase()}</h4>
+              <p><strong>Summary:</strong> ${plan.summary}</p>
+              <p><strong>Details:</strong> ${plan.details.replace(/\n/g, '<br>')}</p>
+              <p><strong>Notes:</strong> ${plan.notes}</p>
+              <button class="chooseBtn" data-plan="${planKey}" style="background-color: #007BFF; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer;">Choose This Plan</button>
+            `;
+            optionsDiv.appendChild(planDiv);
+          }
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to generate plan: ' + response.statusText);
-        }
-
-        const result = await response.json();
-        const planDisplay = document.getElementById('planDisplay');
-        planDisplay.textContent = result.fullPlan || 'Plan generated! Check your profile.';
-        alert('Plan generated successfully!');
-      } catch (err) {
-        console.error('Error generating plan:', err);
-        alert('Error: ' + err.message);
+        document.getElementById('planSelection').classList.remove('hidden');  // Show selection area
       }
+
+      // NEW: Handle plan choice
+      async function choosePlan(planKey) {
+        try {
+          const { data: { user } } = await supabaseClient.auth.getUser();
+          const userData = { chosenPlan: planKey, userId: user.id, email: user.email };  // Send choice to n8n
+
+          const response = await fetch('https://passiesport.app.n8n.cloud/webhook/choose-plan', {  // New webhook for choice
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to finalize plan: ' + response.statusText);
+          }
+
+          const result = await response.json();  // Expect detailed plan
+          document.getElementById('planDisplay').textContent = result.detailedPlan || 'Detailed plan generated!';
+          document.getElementById('planSelection').classList.add('hidden');  // Hide selection
+          alert('Plan finalized!');
+        } catch (err) {
+          console.error('Error choosing plan:', err);
+          alert('Error: ' + err.message);
+        }
+      }
+
+      // Event listeners
+      document.getElementById('generatePlanBtn').addEventListener('click', generatePlan);
+      document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('chooseBtn')) {
+          const planKey = e.target.getAttribute('data-plan');
+          choosePlan(planKey);
+        }
+      });
+
+      // On load: check auth
+      (async () => {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) initApp(); else showAuth();
+      })();
     }
-
-    document.getElementById('generatePlanBtn').addEventListener('click', generatePlan);
-
-    // ... (rest of your existing JavaScript) ...
   </script>
 </body>
-
-  <!-- Supabase JS -->
- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script>
-  // Quick check if Supabase loaded
-  if (typeof supabase === 'undefined') {
-    console.error('Supabase script failed to load. Try refreshing or check your network.');
-  } else {
-    console.log('Supabase loaded successfully.');
-  }
-</script>
-
-  <script>
-  // ---------- CONFIG ----------
-  const SUPABASE_URL = "https://utrmpajuymlcqixcdter.supabase.co";  
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0cm1wYWp1eW1sY3FpeGNkdGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNjExMTMsImV4cCI6MjA3NzgzNzExM30.6gEBRDGSsS7pE_I73C2ioGLyCo62Wyv6XtGPKzM4AHg";  
-
-  // Wait for Supabase to load and initialize the client
-  if (typeof supabase === 'undefined') {
-    console.error('Supabase script not loaded. Check the CDN link.');
-  } else {
-    const { createClient } = supabase;
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // ---------- HELPERS ----------
-    const $ = id => document.getElementById(id);
-
-    // Auth elements
-    const emailInput = $('email'), passInput = $('password');
-    const signupBtn = $('signupBtn'), loginBtn = $('loginBtn'), logoutBtn = $('logoutBtn');
-    const authMsg = $('authMsg');
-
-    // App elements
-    const authDiv = $('auth'), appDiv = $('app');
-    const planStatus = $('planStatus'), planJson = $('planJson');
-    const messagesDiv = $('messages'), msgInput = $('msgInput'), sendMsgBtn = $('sendMsgBtn');
-
-    // ---------- AUTH ----------
-    signupBtn.onclick = async () => {
-      authMsg.textContent = "";
-      const email = emailInput.value.trim(), password = passInput.value.trim();
-      if (!email || !password) { authMsg.textContent = "Provide email & password"; return; }
-      const { error } = await supabaseClient.auth.signUp({ email, password });
-      if (error) authMsg.textContent = error.message; else authMsg.textContent = "Check your email to confirm (if enabled)";
-    };
-
-    loginBtn.onclick = async () => {
-      authMsg.textContent = "";
-      const email = emailInput.value.trim(), password = passInput.value.trim();
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) { authMsg.textContent = error.message; return; }
-      initApp(); // load app
-    };
-
-    logoutBtn.onclick = async () => {
-      await supabaseClient.auth.signOut();
-      showAuth();
-    };
-
-    // ---------- UI Flow ----------
-    function showAuth(){ authDiv.classList.remove('hidden'); appDiv.classList.add('hidden'); }
-    function showApp(){ authDiv.classList.add('hidden'); appDiv.classList.remove('hidden'); }
-
-    async function initApp(){
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) { showAuth(); return; }
-      showApp();
-      await loadPlanForUser(user.id);
-      await loadMessages(user.id);
-      // Optional: subscribe to realtime messages (Supabase Realtime)
-      supabaseClient.channel('public:messages')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-          const m = payload.new;
-          if (m.user_id === user.id) addMessageToUI(m);
-        })
-        .subscribe();
-    }
-
-    // ---------- Load plan ----------
-    async function loadPlanForUser(userId){
-  const today = new Date().toISOString().slice(0,10);
-  planStatus.textContent = "Fetching plan…";
-
-  const { data, error } = await supabaseClient
-    .from('plans')
-    .select('id, plan_date, plan_json, created_at')
-    .eq('user_id', userId)
-    .eq('plan_date', today)
-    .limit(1)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    planStatus.textContent = "Error loading plan: " + error.message;
-    planJson.textContent = "";
-    return;
-  }
-  if (!data || data.length === 0) {
-    planStatus.textContent = "No plan for today. Generate one below!";
-    planJson.textContent = "";
-    return;
-  }
-  planStatus.textContent = "Today's plan:";
-  // Format the plan with line breaks for readability
-  const formattedPlan = data[0].plan_json.replace(/\\n/g, '\n');  // Ensure \n becomes actual newlines
-  planJson.textContent = formattedPlan;
-}
-
-    // ---------- Messages ----------
-    async function loadMessages(userId){
-      messagesDiv.innerHTML = "<p class='text-sm text-gray-500'>Loading messages…</p>";
-      const { data, error } = await supabaseClient
-        .from('messages')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true });
-      if (error) { messagesDiv.innerHTML = "<p class='text-sm text-red-500'>Error loading messages</p>"; return; }
-      messagesDiv.innerHTML = '';
-      data.forEach(addMessageToUI);
-    }
-
-    function addMessageToUI(m){
-      const el = document.createElement('div');
-      el.className = 'p-2 border-b text-sm';
-      el.textContent = (new Date(m.created_at)).toLocaleString() + " — " + m.content;
-      messagesDiv.appendChild(el);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    sendMsgBtn.onclick = async () => {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) { alert('Please login'); return; }
-      const content = msgInput.value.trim();
-      if (!content) return;
-      const { error } = await supabaseClient.from('messages').insert([{ user_id: user.id, content }]);
-      if (error) return alert('Error: ' + error.message);
-      msgInput.value = '';
-      // message will show via realtime subscription or you can optimistically render
-    };
-
-    // On load: check auth
-    (async () => {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (user) initApp(); else showAuth();
-    })();
-  }
-    // ... (your existing code: supabase client, auth functions, etc.) ...
-
-// NEW: Function to generate plan on-demand
-async function generatePlan() {
-  try {
-    const { data: { user } } = await supabaseClient.auth.getUser();  // Get logged-in user
-    if (!user) {
-      alert('Please log in first.');
-      return;
-    }
-
-    // Fetch user profile from Supabase (replace with actual data or form inputs)
-    const { data: profile, error } = await supabaseClient
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-    if (error || !profile) {
-      alert('User profile not found. Please complete your profile.');
-      return;
-    }
-
-    // Prepare data to send to n8n webhook (map to agent prompt fields)
-    const userData = {
-      email: profile.email,
-      gender: profile.gender,
-      weight: profile.weight,
-      date_of_birth: profile.date_of_birth,
-      fit_status: profile.fit_status,
-      goal: profile.goal,
-      days_per_week: profile.days_per_week,
-      equipment: profile.equipment,
-      isFirstWeek: true,  // Assume first week; change to false for subsequent
-      feedbackSummary: ''  // Add user feedback if available
-    };
-
-    // POST to n8n webhook
-    const response = await fetch('https://passiesport.app.n8n.cloud/webhook/generate-plan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate plan: ' + response.statusText);
-    }
-
-    const result = await response.json();  // n8n returns the plan (e.g., { fullPlan: "..." })
-    
-    // Display the plan in the webapp UI
-    const planDisplay = document.getElementById('planDisplay');
-    planDisplay.textContent = result.fullPlan || 'Plan generated! Check your profile.';
-    alert('Plan generated successfully!');
-  } catch (err) {
-    console.error('Error generating plan:', err);
-    alert('Error: ' + err.message);
-  }
-}
-
-// NEW: Add event listener for the button
-document.getElementById('generatePlanBtn').addEventListener('click', generatePlan);
-
-// ... (rest of your existing code: on load check auth) ...
-</script>
-</body>
 </html>
-
-
-
-
-
-
-
-
