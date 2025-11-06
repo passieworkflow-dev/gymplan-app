@@ -23,33 +23,33 @@
     </div>
 
     <div id="app" class="hidden space-y-4">
-      <div class="flex justify-between items-center">
-        <h2 class="text-xl font-semibold">Your plan</h2>
-        <div>
-          <button id="logoutBtn" class="text-sm text-gray-600">Log out</button>
-        </div>
-      </div>
-
-      <div id="planCard" class="p-4 border rounded bg-gray-50">
-        <p id="planStatus" class="text-sm text-gray-600">Loading plan…</p>
-        <pre id="planJson" class="text-xs mt-2 overflow-auto"></pre>
-      </div>
-
-      <div>
-        <h3 class="font-medium">Chat / Feedback</h3>
-        <div id="messages" class="h-40 overflow-auto border rounded p-2 bg-white mb-2"></div>
-        <div class="flex gap-2">
-          <input id="msgInput" class="flex-1 p-2 border rounded" placeholder="Type a message..." />
-          <button id="sendMsgBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Send</button>
-        </div>
-      </div>
-
-      <!-- NEW: Add the button and display div here, right after the Chat / Feedback section -->
-      <div style="margin-top: 20px;">
-        <button id="generatePlanBtn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Generate New Plan</button>
-      </div>
-      <div id="planDisplay" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; white-space: pre-wrap;"></div>
+  <div class="flex justify-between items-center">
+    <h2 class="text-xl font-semibold">Your plan</h2>
+    <div>
+      <button id="logoutBtn" class="text-sm text-gray-600">Log out</button>
     </div>
+  </div>
+
+  <div id="planCard" class="p-4 border rounded bg-gray-50">
+    <p id="planStatus" class="text-sm text-gray-600">Loading plan…</p>
+    <pre id="planJson" class="text-xs mt-2 overflow-auto"></pre>
+  </div>
+
+  <div>
+    <h3 class="font-medium">Chat / Feedback</h3>
+    <div id="messages" class="h-40 overflow-auto border rounded p-2 bg-white mb-2"></div>
+    <div class="flex gap-2">
+      <input id="msgInput" class="flex-1 p-2 border rounded" placeholder="Type a message..." />
+      <button id="sendMsgBtn" class="bg-indigo-600 text-white px-4 py-2 rounded">Send</button>
+    </div>
+  </div>
+
+  <!-- NEW: Button and display for generating plans -->
+  <div style="margin-top: 20px;">
+    <button id="generatePlanBtn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Generate New Plan</button>
+  </div>
+  <div id="planDisplay" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; white-space: pre-wrap;"></div>
+</div>
   </div>
 
   <!-- Supabase JS -->
@@ -325,6 +325,7 @@ document.getElementById('generatePlanBtn').addEventListener('click', generatePla
 </script>
 </body>
 </html>
+
 
 
 
