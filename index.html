@@ -26,6 +26,7 @@
         <h2 class="text-xl font-semibold">Your plan</h2>
         <div>
           <button id="logoutBtn" class="text-sm text-gray-600">Log out</button>
+          <button id="previousPlansBtn" class="text-sm text-blue-600 ml-2">Previous Chosen Plans</button>
         </div>
       </div>
 
@@ -39,6 +40,11 @@
         <div id="planOptions" style="margin-top: 10px;"></div>
       </div>
 
+      <div id="previousPlansSection" class="hidden" style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9;">
+        <h3 class="font-medium">Previous Chosen Plans</h3>
+        <div id="previousPlansContent" style="margin-top: 10px;"></div>
+      </div>
+
       <div>
         <h3 class="font-medium">Chat / Feedback</h3>
         <div id="messages" class="h-40 overflow-auto border rounded p-2 bg-white mb-2"></div>
@@ -50,6 +56,7 @@
 
       <div style="margin-top: 20px;">
         <button id="generatePlanBtn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Generate New Weekly Plan</button>
+        <button id="generateTodayBtn" style="background-color: #007BFF; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">Generate Today's Plan</button>
       </div>
       <div id="planDisplay" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; white-space: pre-wrap;"></div>
     </div>
@@ -75,6 +82,8 @@
       const authDiv = $('auth'), appDiv = $('app');
       const planStatus = $('planStatus'), planJson = $('planJson');
       const messagesDiv = $('messages'), msgInput = $('msgInput'), sendMsgBtn = $('sendMsgBtn');
+      const previousPlansBtn = $('previousPlansBtn'), previousPlansSection = $('previousPlansSection'), previousPlansContent = $('previousPlansContent');
+      const generateTodayBtn = $('generateTodayBtn');
 
       signupBtn.onclick = async () => {
         authMsg.textContent = "";
@@ -256,16 +265,65 @@
             throw new Error('Failed to finalize plan: ' + response.statusText);
           }
           const result = await response.json();
-          document.getElementById('planDisplay').textContent = result.detailedPlan || 'Detailed plan generated!';
+          alert('Plan chosen! Use "Generate Today\'s Plan" for daily workouts.');
           document.getElementById('planSelection').classList.add('hidden');
-          alert('Plan finalized!');
         } catch (err) {
           console.error('Error choosing plan:', err);
           alert('Error: ' + err.message);
         }
       }
 
+      async function generateTodayPlan() {
+        try {
+          const { data: { user } } = await supabaseClient.auth.getUser();
+          if (!user) {
+            alert('Please log in first.');
+            return;
+          }
+          const response = await fetch('/api/generate-today-plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id })
+          });
+          if (!response.ok) {
+            throw new Error('Failed to generate today\'s plan: ' + response.statusText);
+          }
+          const result = await response.json();
+          if (result.todayPlan) {
+            planStatus.textContent = "Today's plan generated!";
+            planJson.textContent = result.todayPlan;
+          } else {
+            throw new Error('No plan generated. Choose a plan first.');
+          }
+        } catch (err) {
+          console.error('Error generating today\'s plan:', err);
+          alert('Error: ' + err.message);
+        }
+      }
+
+      async function loadPreviousPlans() {
+        try {
+          const { data: { user } } = await supabaseClient.auth.getUser();
+          if (!user) return;
+          const { data, error } = await supabaseClient
+            .from('plans')
+            .select('chosen_plan, current_day, plan_date')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+          if (error) {
+            previousPlansContent.innerHTML = 'Error loading history.';
+            return;
+          }
+          previousPlansContent.innerHTML = data.map(p => `<p><strong>${p.plan_date}:</strong> Day ${p.current_day} - ${p.chosen_plan ? 'Chosen plan available' : 'No chosen plan'}</p>`).join('');
+          previousPlansSection.classList.remove('hidden');
+        } catch (err) {
+          console.error('Error loading previous plans:', err);
+        }
+      }
+
       document.getElementById('generatePlanBtn').addEventListener('click', generatePlan);
+      document.getElementById('generateTodayBtn').addEventListener('click', generateTodayPlan);
+      document.getElementById('previousPlansBtn').addEventListener('click', loadPreviousPlans);
       document.addEventListener('click', (e) => {
         if (e.target.classList.contains('chooseBtn')) {
           const planKey = e.target.getAttribute('data-plan');
