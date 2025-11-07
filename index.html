@@ -251,33 +251,43 @@ async function generatePlan() {
 document.getElementById('generatePlanBtn').addEventListener('click', generatePlan);
 console.log('Event listener attached to generatePlanBtn');  // Debug: Confirm listener is set
     
-    // NEW: Display plan options with choice buttons
-    function displayPlanOptions(plans) {
-      const optionsDiv = document.getElementById('planOptions');
-      optionsDiv.innerHTML = '';  // Clear previous
-
-      ['planA', 'planB', 'planC'].forEach(planKey => {
-        const plan = plans[planKey];
-        if (plan) {
-          const planDiv = document.createElement('div');
-          planDiv.style.marginBottom = '15px';
-          planDiv.style.padding = '10px';
-          planDiv.style.border = '1px solid #ccc';
-          planDiv.style.backgroundColor = '#fff';
-          planDiv.innerHTML = `
-            <h4>${planKey.toUpperCase()}</h4>
-            <p><strong>Summary:</strong> ${plan.summary}</p>
-            <p><strong>Details:</strong> ${plan.details.replace(/\n/g, '<br>')}</p>
-            <p><strong>Notes:</strong> ${plan.notes}</p>
-            <button class="chooseBtn" data-plan="${planKey}" style="background-color: #007BFF; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer;">Choose This Plan</button>
-          `;
-          optionsDiv.appendChild(planDiv);
-        }
-      });
-
-      document.getElementById('planSelection').classList.remove('hidden');  // Show selection area
+     // NEW: Display plan options with choice buttons
+  function displayPlanOptions(plans) {
+    console.log('Displaying plan options:', plans);  // Debug: Log the full plans object
+    const optionsDiv = document.getElementById('planOptions');
+    if (!optionsDiv) {
+      console.error('planOptions div not found in DOM');
+      return;
     }
+    optionsDiv.innerHTML = '';  // Clear previous
 
+    ['planA', 'planB', 'planC'].forEach(planKey => {
+      const plan = plans[planKey];
+      console.log(`Processing ${planKey}:`, plan);  // Debug: Log each plan
+      if (plan && plan.summary) {  // Ensure plan has data
+        const planDiv = document.createElement('div');
+        planDiv.style.marginBottom = '15px';
+        planDiv.style.padding = '10px';
+        planDiv.style.border = '1px solid #ccc';
+        planDiv.style.backgroundColor = '#fff';
+        planDiv.innerHTML = `
+          <h4>${planKey.toUpperCase()}</h4>
+          <p><strong>Summary:</strong> ${plan.summary}</p>
+          <p><strong>Details:</strong> ${plan.details ? plan.details.replace(/\n/g, '<br>') : 'No details'}</p>
+          <p><strong>Notes:</strong> ${plan.notes || 'No notes'}</p>
+          <button class="chooseBtn" data-plan="${planKey}" style="background-color: #007BFF; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer;">Choose This Plan</button>
+        `;
+        optionsDiv.appendChild(planDiv);
+        console.log(`${planKey} option added to DOM`);  // Debug: Confirm addition
+      } else {
+        console.warn(`${planKey} not found or invalid in plans`);
+      }
+    });
+
+    document.getElementById('planSelection').classList.remove('hidden');  // Show selection area
+    console.log('Plan selection area shown');  // Debug: Confirm visibility
+  }
+  
     // NEW: Handle plan choice
     async function choosePlan(planKey) {
       try {
@@ -322,6 +332,7 @@ console.log('Event listener attached to generatePlanBtn');  // Debug: Confirm li
 </script>
 </body>
 </html>
+
 
 
 
