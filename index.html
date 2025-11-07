@@ -189,82 +189,86 @@
     };
 
 // ---------- NEW: Plan Generation Functions ----------
-  // UPDATED: Generate plan options (3 previews) with extra debugging
-  async function generatePlan() {
-    console.log('generatePlan function called');
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) {
-        alert('Please log in first.');
-        return;
-      }
-      console.log('User found:', user.email);
-
-      const { data: profile, error } = await supabaseClient
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      if (error || !profile) {
-        alert('User profile not found. Please complete your profile.');
-        return;
-      }
-      console.log('Profile loaded:', profile.email);
-
-      const userData = {
-        email: profile.email,
-        gender: profile.gender,
-        weight: profile.weight,
-        date_of_birth: profile.date_of_birth,
-        fit_status: profile.fit_status,
-        goal: profile.goal,
-        days_per_week: profile.days_per_week,
-        equipment: profile.equipment,
-        isFirstWeek: true,
-        feedbackSummary: '',
-        user_id: user.id
-      };
-      console.log('User data prepared:', userData);
-
-      const response = await fetch('/api/generate-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
-      });
-      console.log('Fetch response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error('Failed to generate plan options: ' + response.statusText);
-      }
-
-      // NEW: Log the raw response text to see exactly what n8n is sending
-      const rawResponseText = await response.text();
-      console.log('Raw response text from n8n:', rawResponseText);
-
-      // Parse the response (clone it since we consumed the body with .text())
-      const result = JSON.parse(rawResponseText);
-      console.log('Parsed result from n8n:', result);
-      console.log('Is result an array?', Array.isArray(result));
-      if (result && result.length > 0) {
-        console.log('First item in result:', result[0]);
-        console.log('Does result[0] have json?', result[0].hasOwnProperty('json'));
-        if (result[0].json) {
-          console.log('result[0].json contents:', result[0].json);
-        }
-      }
-
-      // FIX: Access the nested json object from the first item in the array
-      if (result && Array.isArray(result) && result.length > 0 && result[0].json) {
-        displayPlanOptions(result[0].json);
-      } else {
-        throw new Error('Invalid response structure from n8n. Check console for raw response details.');
-      }
-    } catch (err) {
-      console.error('Error generating plan options:', err);
-      alert('Error: ' + err.message);
+// UPDATED: Generate plan options (3 previews) - Fixed parsing
+async function generatePlan() {
+  console.log('generatePlan function called');
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      alert('Please log in first.');
+      return;
     }
-  }
+    console.log('User found:', user.email);
 
+    const { data: profile, error } = await supabaseClient
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    if (error || !profile) {
+      alert('User profile not found. Please complete your profile.');
+      return;
+    }
+    console.log('Profile loaded:', profile.email);
+
+    const userData = {
+      email: profile.email,
+      gender: profile.gender,
+      weight: profile.weight,
+      date_of_birth: profile.date_of_birth,
+      fit_status: profile.fit_status,
+      goal: profile.goal,
+      days_per_week: profile.days_per_week,
+      equipment: profile.equipment,
+      isFirstWeek: true,
+      feedbackSummary: '',
+      user_id: user.id
+    };
+    console.log('User data prepared:', userData);
+
+    const response = await fetch('/api/generate-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+    console.log('Fetch response status:', response.status);
+
+    if (!response.ok) {
+      throw new Error('Failed to generate plan options: ' + response.statusText);
+    }
+
+    // Parse the response
+    const result = await response.json();
+    console.log('Parsed result from n8n:', result);
+    console.log('Is result an array?', Array.isArray(result));
+    if (result && result.length > 0) {
+      console.log('First item in result:', result[0]);
+      console.log('Does result[0] have planA?', result[0].hasOwnProperty('planA'));
+    }
+
+    // FIX: Access result[0] directly (plans are not nested under 'json')
+    if (result && Array.isArray(result) && result.length > 0 && result[0].planA) {
+      displayPlanOptions(result[0]);
+    } else {
+      throw new Error('Invalid response structure from n8n. Check console for details.');
+    }
+  } catch (err) {
+    console.error('Error generating plan options:', err);
+    alert('Error: ' + err.message);
+  }
+}
+
+    // FIX: Access the nested json object from the first item in the array
+    if (result && Array.isArray(result) && result.length > 0 && result[0].json) {
+      displayPlanOptions(result[0].json);
+    } else {
+      throw new Error('Invalid response structure from n8n. Check console for raw response details.');
+    }
+  } catch (err) {
+    console.error('Error generating plan options:', err);
+    alert('Error: ' + err.message);
+  }
+}
 
 
 // Event listeners
@@ -352,6 +356,7 @@ console.log('Event listener attached to generatePlanBtn');  // Debug: Confirm li
 </script>
 </body>
 </html>
+
 
 
 
