@@ -210,6 +210,10 @@ async function generatePlan() {
       return;
     }
     console.log('Profile loaded:', profile.email);  // Debug: Confirm profile is fetched
+    console.log('Raw response:', response);
+console.log('Response status:', response.status);
+const result = await response.json();
+console.log('Parsed result:', result);
 
     const userData = {
       email: profile.email,
@@ -334,6 +338,7 @@ console.log('Event listener attached to generatePlanBtn');  // Debug: Confirm li
 </script>
 </body>
 </html>
+
 
 
 
