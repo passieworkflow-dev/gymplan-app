@@ -188,7 +188,7 @@
       // message will show via realtime subscription or you can optimistically render
     };
 
-   // ---------- NEW: Plan Generation Functions ----------
+// ---------- NEW: Plan Generation Functions ----------
 // UPDATED: Generate plan options (3 previews)
 async function generatePlan() {
   console.log('generatePlan function called');  // Debug: Check if this prints on button click
@@ -221,9 +221,10 @@ async function generatePlan() {
       days_per_week: profile.days_per_week,
       equipment: profile.equipment,
       isFirstWeek: true,
-      feedbackSummary: ''
+      feedbackSummary: '',
+      user_id: user.id  // NEW: Add the user_id from Supabase auth
     };
-    console.log('User data prepared:', userData);  // Debug: Check data structure
+    console.log('User data prepared:', userData);  // Debug: Check data structure (should now include user_id)
 
     const response = await fetch('/api/generate-plan', {
       method: 'POST',
@@ -246,6 +247,7 @@ async function generatePlan() {
     alert('Error: ' + err.message);
   }
 }
+
 
 // Event listeners
 document.getElementById('generatePlanBtn').addEventListener('click', generatePlan);
@@ -332,6 +334,7 @@ console.log('Event listener attached to generatePlanBtn');  // Debug: Confirm li
 </script>
 </body>
 </html>
+
 
 
 
