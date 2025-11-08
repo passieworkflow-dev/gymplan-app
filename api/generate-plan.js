@@ -6,7 +6,7 @@ export default async function handler(req, res) {
 
   try {
     // Forward the request to n8n
-    const n8nResponse = await fetch('https://passiesport.app.n8n.cloud/webhook-test/generate-plan', {
+    const n8nResponse = await fetch('https://passiesport.app.n8n.cloud/webhook/generate-plan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
