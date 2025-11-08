@@ -306,45 +306,46 @@
         }
       }
 
-      async function generateTodayPlan() {
-        try {
-          const user = await getCurrentUser();
-          if (!user) return;
+     async function generateTodayPlan() {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return;
 
-          const { data: existingPlan, error } = await supabaseClient
-            .from('plans')
-            .select('chosen_plan')
-            .eq('user_id', user.id)
-            .limit(1)
-            .order('created_at', { ascending: false });
-          if (error || !existingPlan || existingPlan.length === 0 || !existingPlan[0].chosen_plan) {
-            alert('No chosen plan found. Choose a weekly plan first.');
-            return;
-          }
-          const chosenPlan = existingPlan[0].chosen_plan;
+    const { data: existingPlan, error } = await supabaseClient
+      .from('plans')
+      .select('chosen_plan')
+      .eq('user_id', user.id)
+      .limit(1)
+      .order('created_at', { ascending: false });
+    if (error || !existingPlan || existingPlan.length === 0 || !existingPlan[0].chosen_plan) {
+      alert('No chosen plan found. Choose a weekly plan first.');
+      return;
+    }
+    const chosenPlan = existingPlan[0].chosen_plan;
 
-          const response = await fetch('/api/generate-today-plan', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id })
-          });
-          if (!response.ok) {
-            const errorText = await response.text();  // Get response text for better error
-            throw new Error(`Failed to generate today's plan: ${response.status} - ${errorText}`);
-          }
-          const contentType = response.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Response is not JSON');
-          }
-          const data = await response.json();
-          console.log('Plan generated:', data);
-          alert('Today’s plan generated successfully!');
-          await loadPlanForUser(user.id);
-        } catch (err) {
-          console.error('Error generating today\'s plan:', err);
-          alert('Error: ' + err.message);
-        }
-      }
+    const response = await fetch('/api/generate-today-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id })
+    });
+    if (!response.ok) {
+      const errorText = await response.text();  // Get the actual error response
+      throw new Error(`API failed: ${response.status} - ${errorText}`);
+    }
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      throw new Error(`Response is not JSON: ${text}`);
+    }
+    const data = await response.json();  // Only parse if it's JSON
+    console.log('Plan generated:', data);
+    alert('Today’s plan generated successfully!');
+    await loadPlanForUser(user.id);
+  } catch (err) {
+    console.error('Error generating today\'s plan:', err);
+    alert('Error: ' + err.message);
+  }
+}
 
       async function loadPreviousPlans() {
         try {
@@ -394,3 +395,4 @@
   </script>
 </body>
 </html>
+
