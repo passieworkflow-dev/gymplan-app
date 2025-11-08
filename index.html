@@ -178,13 +178,17 @@
         msgInput.value = '';
       };
 
+      // UPDATED: Generate plan options (3 previews) with user_id included
       async function generatePlan() {
+        console.log('generatePlan function called');  // Debug: Check if this prints on button click
         try {
           const { data: { user } } = await supabaseClient.auth.getUser();
           if (!user) {
             alert('Please log in first.');
             return;
           }
+          console.log('User found:', user.email);  // Debug: Confirm user is logged in
+
           const { data: profile, error } = await supabaseClient
             .from('user_profiles')
             .select('*')
@@ -194,6 +198,8 @@
             alert('User profile not found. Please complete your profile.');
             return;
           }
+          console.log('Profile loaded:', profile.email);  // Debug: Confirm profile is fetched
+
           const userData = {
             email: profile.email,
             gender: profile.gender,
@@ -205,22 +211,26 @@
             equipment: profile.equipment,
             isFirstWeek: true,
             feedbackSummary: '',
-            user_id: user.id
+            user_id: user.id  // UPDATED: Add the user_id from Supabase auth
           };
+          console.log('User data prepared:', userData);  // Debug: Check data structure (should now include user_id)
+
           const response = await fetch('/api/generate-plan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userData)
           });
+          console.log('Fetch response status:', response.status);  // Debug: Check if fetch succeeds
+
           if (!response.ok) {
             throw new Error('Failed to generate plan options: ' + response.statusText);
           }
+
           const result = await response.json();
-          if (result && Array.isArray(result) && result.length > 0 && result[0] && result[0].planA) {
-            displayPlanOptions(result[0]);
-          } else {
-            throw new Error('Invalid response structure from n8n.');
-          }
+          console.log('Result from n8n:', result);  // Debug: Check what n8n returns
+          
+          // Display the 3 plan options for selection
+          displayPlanOptions(result);
         } catch (err) {
           console.error('Error generating plan options:', err);
           alert('Error: ' + err.message);
