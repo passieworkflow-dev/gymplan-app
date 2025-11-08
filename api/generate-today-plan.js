@@ -5,7 +5,7 @@ export default async function handler(req, res) {
 
   try {
     const { userId } = req.body;  // From frontend
-    const n8nResponse = await fetch('https://passiesport.app.n8n.cloud/webhook-test/generate-today-plan', {
+    const n8nResponse = await fetch('https://passiesport.app.n8n.cloud/webhook/generate-today-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId })
