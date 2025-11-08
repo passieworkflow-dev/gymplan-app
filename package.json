@@ -1,0 +1,10 @@
+{
+  "name": "gymplan-app",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "echo 'No dev script needed'",
+    "build": "echo 'No build needed'",
+    "start": "echo 'No start needed'"
+  },
+  "dependencies": {}
+}
