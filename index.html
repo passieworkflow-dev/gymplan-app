@@ -278,27 +278,55 @@
         }
       }
 
-     async function generateTodayPlan() {
-  // ✅ Define or retrieve these values before using them
-  const userId = document.getElementById('userIdInput').value;
-  const email = document.getElementById('emailInput').value;
-  const chosenPlan = document.getElementById('planSelect').value;
-
+async function generateTodayPlan() {
   try {
+    // ✅ Get the logged-in user directly from Supabase Auth
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      alert('Please log in first.');
+      return;
+    }
+
+    // ✅ Get chosen plan from the latest entry in Supabase
+    const { data: existingPlan, error: planError } = await supabaseClient
+      .from('plans')
+      .select('chosen_plan')
+      .eq('user_id', user.id)
+      .limit(1)
+      .order('created_at', { ascending: false });
+
+    if (planError || !existingPlan || existingPlan.length === 0 || !existingPlan[0].chosen_plan) {
+      alert('No chosen plan found. Please choose a weekly plan first.');
+      return;
+    }
+
+    const chosenPlan = existingPlan[0].chosen_plan;
+
+    // ✅ Call your n8n webhook directly
     const response = await fetch('https://passiesport.app.n8n.cloud/webhook/generate-today-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, email, chosenPlan }),
+      body: JSON.stringify({
+        userId: user.id,
+        email: user.email,
+        chosenPlan: chosenPlan,
+      }),
     });
 
     if (!response.ok) throw new Error(`Failed to generate today's plan: ${response.status}`);
     const data = await response.json();
     console.log('Plan generated successfully:', data);
+    alert('Today’s plan generated successfully!');
+
+    // Optional: reload the latest plan
+    await loadPlanForUser(user.id);
+
   } catch (error) {
     console.error('Error generating today\'s plan:', error);
     alert('Something went wrong while generating the plan.');
   }
 }
+
 
           // Check if a plan has been chosen (basic check via Supabase)
           const { data: existingPlan } = await supabaseClient
@@ -387,6 +415,7 @@ if (!response.ok) {
   </script>
 </body>
 </html>
+
 
 
 
