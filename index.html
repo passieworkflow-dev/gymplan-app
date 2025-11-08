@@ -8,6 +8,7 @@
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center p-6">
   <div class="max-w-2xl w-full bg-white shadow rounded-lg p-6">
+    <!-- Auth Section -->
     <div id="auth" class="space-y-4">
       <h1 class="text-2xl font-bold">Gym Plan App — MVP</h1>
       <div id="auth-forms">
@@ -21,6 +22,7 @@
       </div>
     </div>
 
+    <!-- Main App Section -->
     <div id="app" class="hidden space-y-4">
       <div class="flex justify-between items-center">
         <h2 class="text-xl font-semibold">Your plan</h2>
@@ -35,14 +37,9 @@
         <pre id="planJson" class="text-xs mt-2 overflow-auto"></pre>
       </div>
 
-      <div id="planSelection" class="hidden" style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; background-color: #f0f0f0;">
+      <div id="planSelection" class="hidden p-4 border rounded bg-gray-50">
         <h3 class="font-medium">Choose Your Plan</h3>
-        <div id="planOptions" style="margin-top: 10px;"></div>
-      </div>
-
-      <div id="previousPlansSection" class="hidden" style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9;">
-        <h3 class="font-medium">Previous Chosen Plans</h3>
-        <div id="previousPlansContent" style="margin-top: 10px;"></div>
+        <div id="planOptions" class="mt-4 space-y-4"></div>
       </div>
 
       <div>
@@ -54,11 +51,22 @@
         </div>
       </div>
 
-      <div style="margin-top: 20px;">
-        <button id="generatePlanBtn" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Generate New Weekly Plan</button>
-        <button id="generateTodayBtn" style="background-color: #007BFF; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">Generate Today's Plan</button>
+      <div class="flex gap-2">
+        <button id="generatePlanBtn" class="bg-green-600 text-white px-4 py-2 rounded flex-1">Generate New Weekly Plan</button>
+        <button id="generateTodayBtn" class="bg-blue-600 text-white px-4 py-2 rounded flex-1">Generate Today's Plan</button>
       </div>
-      <div id="planDisplay" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; white-space: pre-wrap;"></div>
+      <div id="planDisplay" class="mt-4 p-4 border rounded bg-gray-50 whitespace-pre-wrap"></div>
+    </div>
+
+    <!-- Previous Plans "Page" (Hidden by Default) -->
+    <div id="previousPlansPage" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-semibold">Previous Chosen Plans</h2>
+        <button id="backToAppBtn" class="text-sm text-blue-600">Back to Main App</button>
+      </div>
+      <div id="previousPlansContent" class="p-4 border rounded bg-gray-50">
+        <p class="text-sm text-gray-600">Loading previous plans...</p>
+      </div>
     </div>
   </div>
 
@@ -79,10 +87,10 @@
       const emailInput = $('email'), passInput = $('password');
       const signupBtn = $('signupBtn'), loginBtn = $('loginBtn'), logoutBtn = $('logoutBtn');
       const authMsg = $('authMsg');
-      const authDiv = $('auth'), appDiv = $('app');
+      const authDiv = $('auth'), appDiv = $('app'), previousPlansPage = $('previousPlansPage');
       const planStatus = $('planStatus'), planJson = $('planJson');
       const messagesDiv = $('messages'), msgInput = $('msgInput'), sendMsgBtn = $('sendMsgBtn');
-      const previousPlansBtn = $('previousPlansBtn'), previousPlansSection = $('previousPlansSection'), previousPlansContent = $('previousPlansContent');
+      const previousPlansBtn = $('previousPlansBtn'), previousPlansContent = $('previousPlansContent'), backToAppBtn = $('backToAppBtn');
       const generateTodayBtn = $('generateTodayBtn');
 
       signupBtn.onclick = async () => {
@@ -106,8 +114,9 @@
         showAuth();
       };
 
-      function showAuth() { authDiv.classList.remove('hidden'); appDiv.classList.add('hidden'); }
-      function showApp() { authDiv.classList.add('hidden'); appDiv.classList.remove('hidden'); }
+      function showAuth() { authDiv.classList.remove('hidden'); appDiv.classList.add('hidden'); previousPlansPage.classList.add('hidden'); }
+      function showApp() { authDiv.classList.add('hidden'); appDiv.classList.remove('hidden'); previousPlansPage.classList.add('hidden'); }
+      function showPreviousPlans() { authDiv.classList.add('hidden'); appDiv.classList.add('hidden'); previousPlansPage.classList.remove('hidden'); }
 
       async function initApp() {
         const { data: { user } } = await supabaseClient.auth.getUser();
@@ -178,17 +187,15 @@
         msgInput.value = '';
       };
 
-      // UPDATED: Generate plan options (3 previews) with user_id included
+      // Generate plan options (3 previews)
       async function generatePlan() {
-        console.log('generatePlan function called');  // Debug: Check if this prints on button click
+        console.log('generatePlan function called');
         try {
           const { data: { user } } = await supabaseClient.auth.getUser();
           if (!user) {
             alert('Please log in first.');
             return;
           }
-          console.log('User found:', user.email);  // Debug: Confirm user is logged in
-
           const { data: profile, error } = await supabaseClient
             .from('user_profiles')
             .select('*')
@@ -198,8 +205,6 @@
             alert('User profile not found. Please complete your profile.');
             return;
           }
-          console.log('Profile loaded:', profile.email);  // Debug: Confirm profile is fetched
-
           const userData = {
             email: profile.email,
             gender: profile.gender,
@@ -211,25 +216,17 @@
             equipment: profile.equipment,
             isFirstWeek: true,
             feedbackSummary: '',
-            user_id: user.id  // UPDATED: Add the user_id from Supabase auth
+            user_id: user.id
           };
-          console.log('User data prepared:', userData);  // Debug: Check data structure (should now include user_id)
-
           const response = await fetch('/api/generate-plan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userData)
           });
-          console.log('Fetch response status:', response.status);  // Debug: Check if fetch succeeds
-
           if (!response.ok) {
             throw new Error('Failed to generate plan options: ' + response.statusText);
           }
-
           const result = await response.json();
-          console.log('Result from n8n:', result);  // Debug: Check what n8n returns
-          
-          // Display the 3 plan options for selection
           displayPlanOptions(result);
         } catch (err) {
           console.error('Error generating plan options:', err);
@@ -238,28 +235,24 @@
       }
 
       function displayPlanOptions(plans) {
-        const optionsDiv = document.getElementById('planOptions');
-        if (!optionsDiv) return;
+        const optionsDiv = $('planOptions');
         optionsDiv.innerHTML = '';
         ['planA', 'planB', 'planC'].forEach(planKey => {
           const plan = plans[planKey];
           if (plan && plan.summary) {
             const planDiv = document.createElement('div');
-            planDiv.style.marginBottom = '15px';
-            planDiv.style.padding = '10px';
-            planDiv.style.border = '1px solid #ccc';
-            planDiv.style.backgroundColor = '#fff';
+            planDiv.className = 'p-4 border rounded bg-white';
             planDiv.innerHTML = `
-              <h4>${planKey.toUpperCase()}</h4>
+              <h4 class="font-semibold">${planKey.toUpperCase()}</h4>
               <p><strong>Summary:</strong> ${plan.summary}</p>
               <p><strong>Details:</strong> ${plan.details ? plan.details.replace(/\n/g, '<br>') : 'No details'}</p>
               <p><strong>Notes:</strong> ${plan.notes || 'No notes'}</p>
-              <button class="chooseBtn" data-plan="${planKey}" style="background-color: #007BFF; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer;">Choose This Plan</button>
+              <button class="chooseBtn bg-blue-600 text-white px-4 py-2 rounded mt-2" data-plan="${planKey}">Choose This Plan</button>
             `;
             optionsDiv.appendChild(planDiv);
           }
         });
-        document.getElementById('planSelection').classList.remove('hidden');
+        $('planSelection').classList.remove('hidden');
       }
 
       async function choosePlan(planKey) {
@@ -275,8 +268,10 @@
             throw new Error('Failed to finalize plan: ' + response.statusText);
           }
           const result = await response.json();
-          alert('Plan chosen! Use "Generate Today\'s Plan" for daily workouts.');
-          document.getElementById('planSelection').classList.add('hidden');
+          alert('Plan chosen! You can now generate today\'s plan.');
+          $('planSelection').classList.add('hidden');
+          // Reload today's plan to reflect changes
+          await loadPlanForUser(user.id);
         } catch (err) {
           console.error('Error choosing plan:', err);
           alert('Error: ' + err.message);
@@ -288,6 +283,16 @@
           const { data: { user } } = await supabaseClient.auth.getUser();
           if (!user) {
             alert('Please log in first.');
+            return;
+          }
+          // Check if a plan has been chosen (basic check via Supabase)
+          const { data: existingPlan } = await supabaseClient
+            .from('plans')
+            .select('chosen_plan')
+            .eq('user_id', user.id)
+            .limit(1);
+          if (!existingPlan || existingPlan.length === 0 || !existingPlan[0].chosen_plan) {
+            alert('No chosen plan found. Please choose a weekly plan first.');
             return;
           }
           const response = await fetch('/api/generate-today-plan', {
@@ -317,15 +322,24 @@
           if (!user) return;
           const { data, error } = await supabaseClient
             .from('plans')
-            .select('chosen_plan, current_day, plan_date')
+            .select('chosen_plan, current_day, plan_date, plan_json')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false });
           if (error) {
             previousPlansContent.innerHTML = 'Error loading history.';
             return;
           }
-          previousPlansContent.innerHTML = data.map(p => `<p><strong>${p.plan_date}:</strong> Day ${p.current_day} - ${p.chosen_plan ? 'Chosen plan available' : 'No chosen plan'}</p>`).join('');
-          previousPlansSection.classList.remove('hidden');
+          if (!data || data.length === 0) {
+            previousPlansContent.innerHTML = '<p>No previous plans found.</p>';
+            return;
+          }
+          previousPlansContent.innerHTML = data.map(p => `
+            <div class="mb-4 p-4 border rounded bg-white">
+              <h4 class="font-semibold">Plan for ${p.plan_date} (Day ${p.current_day})</h4>
+              <p><strong>Chosen Plan:</strong> ${p.chosen_plan || 'None'}</p>
+              <pre class="text-xs mt-2 overflow-auto">${p.plan_json ? p.plan_json.replace(/\\n/g, '\n') : 'No details'}</pre>
+            </div>
+          `).join('');
         } catch (err) {
           console.error('Error loading previous plans:', err);
         }
@@ -333,7 +347,11 @@
 
       document.getElementById('generatePlanBtn').addEventListener('click', generatePlan);
       document.getElementById('generateTodayBtn').addEventListener('click', generateTodayPlan);
-      document.getElementById('previousPlansBtn').addEventListener('click', loadPreviousPlans);
+      document.getElementById('previousPlansBtn').addEventListener('click', () => {
+        loadPreviousPlans();
+        showPreviousPlans();
+      });
+      document.getElementById('backToAppBtn').addEventListener('click', showApp);
       document.addEventListener('click', (e) => {
         if (e.target.classList.contains('chooseBtn')) {
           const planKey = e.target.getAttribute('data-plan');
