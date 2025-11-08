@@ -295,7 +295,7 @@
             alert('No chosen plan found. Please choose a weekly plan first.');
             return;
           }
-         const response = await fetch('https://passiesport.app.n8n.cloud/webhook/generate-today-plan', {
+         const response = await fetch('/api/generate-today-plan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: user.id })
@@ -367,4 +367,5 @@
   </script>
 </body>
 </html>
+
 
